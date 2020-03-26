@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/tendermint/iavl"
-	db "github.com/tendermint/tm-db"
+	db "github.com/tendermint/tendermint/libs/db"
 )
 
 func randBytes(length int) []byte {

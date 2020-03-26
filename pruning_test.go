@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	db "github.com/tendermint/tm-db"
+	db "github.com/tendermint/tendermint/libs/db"
 )
 
 func getTestDBs() (db.DB, db.DB, func()) {

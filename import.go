@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	db "github.com/tendermint/tm-db"
+	db "github.com/tendermint/tendermint/libs/db"
 )
 
 // maxBatchSize is the maximum size of the import batch before flushing it to the database
@@ -128,10 +128,7 @@ func (i *Importer) Add(exportNode *ExportNode) error {
 	i.batch.Set(i.tree.ndb.nodeKey(node.hash), buf.Bytes())
 	i.batchSize++
 	if i.batchSize >= maxBatchSize {
-		err = i.batch.Write()
-		if err != nil {
-			return err
-		}
+		i.batch.Write()
 		i.batch.Close()
 		i.batch = i.tree.ndb.snapshotDB.NewBatch()
 		i.batchSize = 0
@@ -165,13 +162,10 @@ func (i *Importer) Commit() error {
 			len(i.stack))
 	}
 
-	err := i.batch.WriteSync()
-	if err != nil {
-		return err
-	}
+	i.batch.WriteSync()
 	i.tree.ndb.resetLatestVersion(i.version)
 
-	_, err = i.tree.LoadVersion(i.version)
+	_, err := i.tree.LoadVersion(i.version)
 	if err != nil {
 		return err
 	}

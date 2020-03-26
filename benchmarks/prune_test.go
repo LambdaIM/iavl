@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	db "github.com/tendermint/tm-db"
+	db "github.com/tendermint/tendermint/libs/db"
 )
 
 type pruningstrat struct {

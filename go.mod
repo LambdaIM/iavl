@@ -10,4 +10,4 @@ require (
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
 )
 
-replace github.com/tendermint/tendermint => github.com/LambdaIM/tendermint v0.31.5-dev3
+replace github.com/tendermint/tendermint => github.com/LambdaIM/tendermint v0.31.5-fix1

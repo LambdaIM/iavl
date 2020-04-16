@@ -357,6 +357,20 @@ func (node *Node) aminoSize() int {
 	return n
 }
 
+func (node *Node) AminoSize() int {
+	n := 1 +
+		amino.VarintSize(node.size) +
+		amino.VarintSize(node.version) +
+		amino.ByteSliceSize(node.key)
+	if node.isLeaf() {
+		n += amino.ByteSliceSize(node.value)
+	} else {
+		n += amino.ByteSliceSize(node.leftHash) +
+			amino.ByteSliceSize(node.rightHash)
+	}
+	return n
+}
+
 // Writes the node as a serialized byte slice to the supplied io.Writer.
 func (node *Node) writeBytes(w io.Writer) error {
 	cause := amino.EncodeInt8(w, node.height)
@@ -403,6 +417,55 @@ func (node *Node) writeBytes(w io.Writer) error {
 	return nil
 }
 
+func (node *Node) WriteBytes(w io.Writer) error {
+	cause := amino.EncodeInt8(w, node.height)
+	if cause != nil {
+		return errors.Wrap(cause, "writing height")
+	}
+	cause = amino.EncodeVarint(w, node.size)
+	if cause != nil {
+		return errors.Wrap(cause, "writing size")
+	}
+	cause = amino.EncodeVarint(w, node.version)
+	if cause != nil {
+		return errors.Wrap(cause, "writing version")
+	}
+
+	// Unlike writeHashBytes, key is written for inner nodes.
+	cause = amino.EncodeByteSlice(w, node.key)
+	if cause != nil {
+		return errors.Wrap(cause, "writing key")
+	}
+
+	if node.isLeaf() {
+		cause = amino.EncodeByteSlice(w, node.value)
+		if cause != nil {
+			return errors.Wrap(cause, "writing value")
+		}
+	} else {
+		if node.leftHash == nil {
+			panic("node.leftHash was nil in writeBytes")
+		}
+		cause = amino.EncodeByteSlice(w, node.leftHash)
+		if cause != nil {
+			return errors.Wrap(cause, "writing left hash")
+		}
+
+		if node.rightHash == nil {
+			panic("node.rightHash was nil in writeBytes")
+		}
+		cause = amino.EncodeByteSlice(w, node.rightHash)
+		if cause != nil {
+			return errors.Wrap(cause, "writing right hash")
+		}
+	}
+	return nil
+}
+
+func (node *Node) Hash() []byte {
+	return node.hash
+}
+
 func (node *Node) getLeftNode(t *ImmutableTree) *Node {
 	if node.leftNode != nil {
 		return node.leftNode
@@ -425,6 +488,33 @@ func (node *Node) calcHeightAndSize(t *ImmutableTree) {
 
 func (node *Node) calcBalance(t *ImmutableTree) int {
 	return int(node.getLeftNode(t).height) - int(node.getRightNode(t).height)
+}
+
+func (node *Node) traverseNonRecursive(t *ImmutableTree, cb func(*Node) bool) bool {
+	stack := NewStack()
+	stack.Push(node.hash)
+
+	for !stack.Empty() {
+		nodeHash, exist := stack.Pop()
+		if !exist {
+			break
+		}
+		hashBytes := nodeHash.([]byte)
+		n := t.ndb.GetNode(hashBytes)
+
+		if stop := cb(n); stop {
+			return true
+		}
+
+		if len(n.leftHash) != 0 {
+			stack.Push(n.leftHash)
+		}
+		if len(n.rightHash) != 0 {
+			stack.Push(n.rightHash)
+		}
+	}
+
+	return false
 }
 
 // traverse is a wrapper over traverseInRange when we want the whole tree

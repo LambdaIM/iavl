@@ -165,6 +165,13 @@ func (t *ImmutableTree) GetByIndex(index int64) (key []byte, value []byte) {
 	return t.root.getByIndex(t, index)
 }
 
+func (t *ImmutableTree) IterateNonRecursive(fn func(*Node) bool) (stopped bool) {
+	if t.root == nil {
+		return false
+	}
+	return t.root.traverseNonRecursive(t, fn)
+}
+
 // Iterate iterates over all keys of the tree, in order.
 func (t *ImmutableTree) Iterate(fn func(key []byte, value []byte) bool) (stopped bool) {
 	if t.root == nil {
